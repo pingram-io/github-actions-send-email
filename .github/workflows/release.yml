@@ -1,0 +1,54 @@
+# Runs in the mirrored pingram-io/send-action repository.
+#
+# The sync workflow in the monorepo pushes vX.Y.Z tags here. A Marketplace
+# listing hangs off a GitHub Release, so one is created for every version tag.
+#
+# Publishing to the Marketplace itself cannot be automated: GitHub requires a
+# 2FA confirmation performed in a browser (see cli/cli#5193). The job summary
+# therefore links to the release edit page, where the Marketplace checkbox
+# lives. Skipping that step does not break anyone — `@v1` resolves through the
+# git tag regardless; only the version shown on the listing page goes stale.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -e
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists."
+          else
+            gh release create "$TAG" --title "$TAG" --generate-notes
+          fi
+
+      - name: Link the Marketplace publish step
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          {
+            echo "## $TAG released"
+            echo
+            echo "To update the GitHub Marketplace listing, open the release and"
+            echo "tick **Publish this Action to the GitHub Marketplace**:"
+            echo
+            echo "${{ github.server_url }}/${{ github.repository }}/releases/edit/$TAG"
+            echo
+            echo "This is optional. Consumers pinned to \`@v1\` already have this version."
+          } >> "$GITHUB_STEP_SUMMARY"

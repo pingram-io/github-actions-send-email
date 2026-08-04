@@ -1,0 +1,37 @@
+{
+  "name": "pingram-github-actions-send-email",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GitHub Actions for sending email and SMS notifications with Pingram",
+  "keywords": [
+    "actions",
+    "pingram",
+    "notifications",
+    "email",
+    "sms"
+  ],
+  "license": "MIT",
+  "author": {
+    "name": "Pingram",
+    "email": "hello@pingram.io",
+    "url": "https://pingram.io"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run typecheck && npm run build"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10",
+    "pingram": "^1.0.18",
+    "typescript": "^5.7.3"
+  },
+  "homepage": "https://github.com/pingram-io/github-actions-send-email",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pingram-io/github-actions-send-email.git"
+  }
+}

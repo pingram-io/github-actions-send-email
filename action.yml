@@ -1,0 +1,69 @@
+name: Pingram Send Email
+description: >-
+  Send transactional email and failure notifications from your CI workflows with
+  Pingram
+author: Pingram
+branding:
+  icon: mail
+  color: purple
+
+inputs:
+  api-key:
+    description: Pingram API key (pingram_sk_...). Store it as a repository secret.
+    required: true
+  type:
+    description: >-
+      Label the send is grouped under in Logs and Insights. Any string — it does
+      not need to be created in the dashboard first.
+    required: true
+  to:
+    description: Recipient email address
+    required: true
+  subject:
+    description: Email subject line
+    required: true
+  html:
+    description: Email HTML body
+    required: true
+
+  from-name:
+    description: Sender display name
+    required: false
+  from-address:
+    description: Sender address. Must be on a verified domain.
+    required: false
+  preview-text:
+    description: Preview text shown in the inbox list
+    required: false
+  reply-to:
+    description: Comma-separated reply-to addresses
+    required: false
+  cc:
+    description: Comma-separated CC addresses
+    required: false
+  bcc:
+    description: Comma-separated BCC addresses
+    required: false
+
+  schedule:
+    description: ISO 8601 timestamp to send at instead of immediately
+    required: false
+  region:
+    description: 'Pingram API region: us, eu or ca'
+    required: false
+    default: us
+  base-url:
+    description: Custom API base URL. Overrides region.
+    required: false
+  fail-on-error:
+    description: Fail the workflow step when the send fails
+    required: false
+    default: 'true'
+
+outputs:
+  tracking-id:
+    description: Pingram tracking id for the sent email
+
+runs:
+  using: node24
+  main: dist/index.js
