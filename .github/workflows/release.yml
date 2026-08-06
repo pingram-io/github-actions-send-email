@@ -1,4 +1,5 @@
-# Runs in the mirrored pingram-io/send-action repository.
+# Runs in the mirrored pingram-io/github-actions-send-* repositories. This one
+# file is copied to both, so keep it channel-agnostic.
 #
 # The sync workflow in the monorepo pushes vX.Y.Z tags here. A Marketplace
 # listing hangs off a GitHub Release, so one is created for every version tag.

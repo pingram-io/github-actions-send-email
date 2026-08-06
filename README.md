@@ -45,14 +45,15 @@ only runs when something earlier in the job failed.
 
 ### Email several people
 
-`to` takes one recipient; `cc` and `bcc` take comma-separated lists.
+`to`, `cc`, and `bcc` all take comma-separated lists. Each `to` address is
+sent as its own email.
 
 ```yaml
 - uses: pingram-io/github-actions-send-email@v1
   with:
     api-key: ${{ secrets.PINGRAM_API_KEY }}
     type: release-notes
-    to: team@example.com
+    to: team@example.com, oncall@example.com
     cc: product@example.com, support@example.com
     subject: 'Released ${{ github.ref_name }}'
     html: <p>Release notes attached.</p>
@@ -80,7 +81,7 @@ only runs when something earlier in the job failed.
 | --------------- | -------- | ------- | -------------------------------------------- |
 | `api-key`       | yes      |         | Pingram API key (`pingram_sk_...`)           |
 | `type`          | yes      |         | Label used to group the send in your logs    |
-| `to`            | yes      |         | Recipient email address                      |
+| `to`            | yes      |         | Recipient email, or a comma-separated list   |
 | `subject`       | yes      |         | Subject line                                 |
 | `html`          | yes      |         | HTML body                                    |
 | `from-name`     | no       |         | Sender display name                          |
@@ -102,9 +103,9 @@ notification problem can never block a deploy.
 
 ## Outputs
 
-| Name          | Description                      |
-| ------------- | -------------------------------- |
-| `tracking-id` | Pingram tracking id for the send |
+| Name          | Description                                                                     |
+| ------------- | ------------------------------------------------------------------------------- |
+| `tracking-id` | Tracking id(s) for the send — comma-separated when `to` has multiple recipients |
 
 ## Regions
 

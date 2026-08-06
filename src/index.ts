@@ -1,9 +1,10 @@
-import { sendEmail, sendSms, type SendOptions } from './api';
+import { sendEmail, sendSms, type SendOptions, type SendResult } from './api';
 import * as core from './core';
 import {
   buildEmailRequest,
   buildSmsRequest,
   optionalInput,
+  parseRecipients,
   readFailOnError,
   readRegion,
   requiredInput
@@ -22,7 +23,7 @@ async function run(): Promise<void> {
     core.setSecret(apiKey);
 
     const type = requiredInput('type');
-    const to = requiredInput('to');
+    const recipients = parseRecipients(requiredInput('to'));
 
     const options: SendOptions = {
       apiKey,
@@ -30,22 +31,56 @@ async function run(): Promise<void> {
       baseUrl: optionalInput('base-url')
     };
 
-    const result =
+    // Build every request up front so a bad recipient fails before any send.
+    const sends: Array<{ to: string; send: () => Promise<SendResult> }> =
       ACTION_CHANNEL === 'sms'
-        ? await sendSms(buildSmsRequest(type, to), options)
-        : await sendEmail(buildEmailRequest(type, to), options);
+        ? recipients.map((to) => {
+            const request = buildSmsRequest(type, to);
+            return { to, send: () => sendSms(request, options) };
+          })
+        : recipients.map((to) => {
+            const request = buildEmailRequest(type, to);
+            return { to, send: () => sendEmail(request, options) };
+          });
 
-    if (result.trackingId !== undefined) {
-      core.setOutput('tracking-id', result.trackingId);
+    const trackingIds: string[] = [];
+    const failures: string[] = [];
+
+    for (const { to, send } of sends) {
+      try {
+        const result = await send();
+
+        if (result.trackingId !== undefined) {
+          trackingIds.push(result.trackingId);
+        }
+
+        core.info(
+          `Pingram accepted the ${ACTION_CHANNEL} for ${to}${
+            result.trackingId === undefined
+              ? ''
+              : ` (tracking id ${result.trackingId})`
+          }`
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        failures.push(`${to}: ${message}`);
+        core.warning(`Failed to send ${ACTION_CHANNEL} to ${to}: ${message}`);
+      }
     }
 
-    core.info(
-      `Pingram accepted the ${ACTION_CHANNEL} for ${to}${
-        result.trackingId === undefined
-          ? ''
-          : ` (tracking id ${result.trackingId})`
-      }`
-    );
+    if (trackingIds.length > 0) {
+      core.setOutput('tracking-id', trackingIds.join(','));
+    }
+
+    if (failures.length > 0) {
+      const summary =
+        failures.length === 1
+          ? failures[0]!
+          : `Failed to send to ${String(failures.length)} of ${String(recipients.length)} recipients — ${failures.join('; ')}`;
+      if (failOnError) {
+        core.setFailed(summary);
+      }
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (failOnError) {

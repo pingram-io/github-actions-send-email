@@ -125,13 +125,23 @@ function requiredInput(name) {
   }
   return value;
 }
+function splitCommaList(value) {
+  return value.split(",").map((item) => item.trim()).filter((item) => item !== "");
+}
 function listInput(name) {
   const value = optionalInput(name);
   if (value === void 0) {
     return void 0;
   }
-  const items = value.split(",").map((item) => item.trim()).filter((item) => item !== "");
+  const items = splitCommaList(value);
   return items.length > 0 ? items : void 0;
+}
+function parseRecipients(to) {
+  const recipients = splitCommaList(to);
+  if (recipients.length === 0) {
+    throw new Error('The "to" input is required.');
+  }
+  return recipients;
 }
 function readRegion() {
   const value = (optionalInput("region") ?? "us").toLowerCase();
@@ -185,19 +195,45 @@ async function run() {
     const apiKey = requiredInput("api-key");
     setSecret(apiKey);
     const type = requiredInput("type");
-    const to = requiredInput("to");
+    const recipients = parseRecipients(requiredInput("to"));
     const options = {
       apiKey,
       region: readRegion(),
       baseUrl: optionalInput("base-url")
     };
-    const result = false ? await sendSms(buildSmsRequest(type, to), options) : await sendEmail(buildEmailRequest(type, to), options);
-    if (result.trackingId !== void 0) {
-      setOutput("tracking-id", result.trackingId);
+    const sends = false ? recipients.map((to) => {
+      const request = buildSmsRequest(type, to);
+      return { to, send: () => sendSms(request, options) };
+    }) : recipients.map((to) => {
+      const request = buildEmailRequest(type, to);
+      return { to, send: () => sendEmail(request, options) };
+    });
+    const trackingIds = [];
+    const failures = [];
+    for (const { to, send } of sends) {
+      try {
+        const result = await send();
+        if (result.trackingId !== void 0) {
+          trackingIds.push(result.trackingId);
+        }
+        info(
+          `Pingram accepted the ${"email"} for ${to}${result.trackingId === void 0 ? "" : ` (tracking id ${result.trackingId})`}`
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        failures.push(`${to}: ${message}`);
+        warning(`Failed to send ${"email"} to ${to}: ${message}`);
+      }
     }
-    info(
-      `Pingram accepted the ${"email"} for ${to}${result.trackingId === void 0 ? "" : ` (tracking id ${result.trackingId})`}`
-    );
+    if (trackingIds.length > 0) {
+      setOutput("tracking-id", trackingIds.join(","));
+    }
+    if (failures.length > 0) {
+      const summary = failures.length === 1 ? failures[0] : `Failed to send to ${String(failures.length)} of ${String(recipients.length)} recipients \u2014 ${failures.join("; ")}`;
+      if (failOnError) {
+        setFailed(summary);
+      }
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (failOnError) {

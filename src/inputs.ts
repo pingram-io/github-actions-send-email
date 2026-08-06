@@ -20,16 +20,29 @@ export function requiredInput(name: string): string {
   return value;
 }
 
+function splitCommaList(value: string): string[] {
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item !== '');
+}
+
 function listInput(name: string): string[] | undefined {
   const value = optionalInput(name);
   if (value === undefined) {
     return undefined;
   }
-  const items = value
-    .split(',')
-    .map((item) => item.trim())
-    .filter((item) => item !== '');
+  const items = splitCommaList(value);
   return items.length > 0 ? items : undefined;
+}
+
+/** One or more recipients from a comma-separated `to` input. */
+export function parseRecipients(to: string): string[] {
+  const recipients = splitCommaList(to);
+  if (recipients.length === 0) {
+    throw new Error('The "to" input is required.');
+  }
+  return recipients;
 }
 
 export function readRegion(): Region {
